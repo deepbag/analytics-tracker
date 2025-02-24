@@ -9,6 +9,27 @@
   let socket;
   let queue = [];
   let websiteId = null;
+  let locationData = {};
+
+  // Fetch user's location
+  const fetchLocation = async () => {
+    try {
+      const response = await fetch("https://ip-api.com/json");
+      const data = await response.json();
+      locationData = {
+        country: data.country,
+        region: data.regionName,
+        city: data.city,
+        lat: data.lat,
+        lon: data.lon,
+        timezone: data.timezone,
+        isp: data.isp,
+      };
+      console.log("[Analytics] Location fetched:", locationData);
+    } catch (err) {
+      console.warn("[Analytics] Failed to fetch location:", err);
+    }
+  };
 
   // Initialize WebSocket connection
   const initSocket = () => {
@@ -53,7 +74,7 @@
       timestamp: new Date().toISOString(),
       referrer: document.referrer || null,
       eventType: eventName,
-      properties: props,
+      properties: { ...props, ...locationData }, // Merge location data
       websiteId: websiteId, // Attach website ID if available
     };
 
@@ -87,13 +108,14 @@
   setInterval(sendQueue, CONFIG.batchInterval);
 
   // Function to set website ID and track session
-  const trackWebsiteSession = (id) => {
+  const trackWebsiteSession = async (id) => {
     if (!id) {
       console.warn("[Analytics] Invalid website ID. Tracking is disabled.");
       return;
     }
 
     websiteId = id;
+    await fetchLocation(); // Fetch location before tracking session
     initSocket();
     trackEvent("session_start", { websiteId: id });
 
