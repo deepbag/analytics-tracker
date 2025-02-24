@@ -1,73 +1,38 @@
 (function () {
   "use strict";
 
-  const loadPeerJS = () =>
-    new Promise((resolve) => {
-      const s = document.createElement("script");
-      s.src = "https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js";
-      s.onload = () => resolve(window.Peer);
-      document.head.appendChild(s);
-    });
-
   const CONFIG = {
-    serverPeerId: "analytics-server",
-    peerHost: "localhost",
-    peerPort: 9000,
-    peerPath: "/peerjs",
-    batchInterval: 5000,
+    serverUrl: "ws://localhost:9000", // Change this to your WebSocket server URL
+    batchInterval: 5000, // Send every 5 seconds
   };
 
-  let peer,
-    conn,
+  let socket,
     queue = [];
 
-  const getUniqueId = () =>
-    window.location.hostname.replace(/\./g, "_") || "unknown_" + Date.now();
+  // Initialize WebSocket connection
+  const initSocket = () => {
+    socket = new WebSocket(CONFIG.serverUrl);
 
-  const initPeer = async () => {
-    const Peer = await loadPeerJS();
-    peer = new Peer(getUniqueId(), {
-      host: CONFIG.peerHost,
-      port: CONFIG.peerPort,
-      path: CONFIG.peerPath,
-      debug: 2, // Enable debugging
-    });
-
-    peer.on("open", () => {
-      console.log("[Analytics] Peer ID:", peer.id);
-      connectToServer();
-    });
-
-    peer.on("disconnected", () => {
-      console.warn("[Analytics] Disconnected, reconnecting...");
-      peer.reconnect();
-    });
-
-    peer.on("error", (err) => console.error("[Analytics] PeerJS error:", err));
-  };
-
-  const connectToServer = () => {
-    conn = peer.connect(CONFIG.serverPeerId, { reliable: true });
-
-    conn.on("open", () => {
+    socket.onopen = () => {
       console.log("[Analytics] Connected to server");
       sendQueue();
-    });
+    };
 
-    conn.on("data", (data) => {
-      console.log("[Analytics] Server Response:", data);
-    });
+    socket.onmessage = (event) => {
+      console.log("[Analytics] Server Response:", event.data);
+    };
 
-    conn.on("error", (err) =>
-      console.error("[Analytics] Connection error:", err)
-    );
+    socket.onerror = (err) => {
+      console.error("[Analytics] WebSocket error:", err);
+    };
 
-    conn.on("close", () => {
+    socket.onclose = () => {
       console.warn("[Analytics] Connection closed, retrying...");
-      setTimeout(connectToServer, 3000);
-    });
+      setTimeout(initSocket, 3000); // Reconnect after 3 seconds
+    };
   };
 
+  // Track an event
   const trackEvent = (eventName, props = {}) => {
     const payload = {
       domain: window.location.hostname,
@@ -79,13 +44,14 @@
     };
     queue.push(payload);
     console.log("[Analytics] Queued:", payload);
-    if (conn && conn.open) sendQueue();
+    if (socket.readyState === WebSocket.OPEN) sendQueue();
   };
 
+  // Send queued events
   const sendQueue = () => {
-    if (queue.length === 0 || !conn || !conn.open) return;
+    if (queue.length === 0 || socket.readyState !== WebSocket.OPEN) return;
     try {
-      conn.send(JSON.stringify(queue));
+      socket.send(JSON.stringify(queue));
       console.log("[Analytics] Sent:", queue.length, "events");
       queue = [];
     } catch (err) {
@@ -95,7 +61,10 @@
 
   setInterval(sendQueue, CONFIG.batchInterval);
 
-  initPeer().then(() => trackEvent("pageview"));
+  // Auto-track pageview and initialize
+  initSocket();
+  trackEvent("pageview");
 
+  // Expose global track function
   window.track = (eventName, properties) => trackEvent(eventName, properties);
 })();

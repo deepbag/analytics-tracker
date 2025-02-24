@@ -1,0 +1,16 @@
+{
+  "name": "analytics-tracker",
+  "version": "1.0.0",
+  "description": "npm install -g uglify-js uglifyjs tracker.js -o tracker.min.js --compress --mangle",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "ws": "^8.18.1"
+  }
+}
