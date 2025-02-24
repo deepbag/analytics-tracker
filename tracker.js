@@ -96,6 +96,20 @@
     websiteId = id;
     initSocket();
     trackEvent("session_start", { websiteId: id });
+
+    // Track session stop when the user leaves the page
+    window.addEventListener("beforeunload", () => {
+      trackEvent("session_stop", { websiteId: id });
+      sendQueue(); // Ensure the event is sent before the page unloads
+    });
+
+    // Optional: Track session stop when the user switches tabs
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        trackEvent("session_stop", { websiteId: id });
+        sendQueue();
+      }
+    });
   };
 
   // Expose global functions
