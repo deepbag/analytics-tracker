@@ -11,13 +11,14 @@ wss.on("connection", (ws) => {
   console.log("🔗 New client connected");
 
   ws.on("message", (message) => {
-    console.log("📩 Received data:", message);
-
-    // Save data to a file (for logging purposes)
-    saveAnalyticsData(message);
-
-    // Send acknowledgment to client
-    ws.send(JSON.stringify({ status: "success", received: true }));
+    console.log("📩 Raw Received Data:", message.toString()); // Log everything received
+    try {
+      const data = JSON.parse(message.toString());
+      console.log("📩 Parsed Event:", data);
+      saveAnalyticsData(message);
+    } catch (error) {
+      console.error("❌ Error parsing received data:", error);
+    }
   });
 
   ws.on("close", () => {

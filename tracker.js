@@ -42,11 +42,16 @@
       eventType: eventName,
       properties: props,
     };
+  
     queue.push(payload);
-    console.log("[Analytics] Queued:", payload);
-    if (socket.readyState === WebSocket.OPEN) sendQueue();
+    console.log("📩 Queued Event:", JSON.stringify(payload));
+  
+    if (socket.readyState === WebSocket.OPEN) {
+      console.log("🚀 Sending event immediately...");
+      sendQueue();
+    }
   };
-
+  
   // Send queued events
   const sendQueue = () => {
     if (queue.length === 0 || socket.readyState !== WebSocket.OPEN) return;
