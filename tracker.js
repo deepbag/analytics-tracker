@@ -6,11 +6,17 @@
     batchInterval: 5000, // Send every 5 seconds
   };
 
-  let socket,
-    queue = [];
+  let socket;
+  let queue = [];
+  let websiteId = null;
 
   // Initialize WebSocket connection
   const initSocket = () => {
+    if (!websiteId) {
+      console.warn("[Analytics] Website ID is required. Tracking is disabled.");
+      return;
+    }
+
     socket = new WebSocket(CONFIG.serverUrl);
 
     socket.onopen = () => {
@@ -34,6 +40,13 @@
 
   // Track an event
   const trackEvent = (eventName, props = {}) => {
+    if (!websiteId) {
+      console.warn(
+        "[Analytics] Website ID is required. Event tracking is disabled."
+      );
+      return;
+    }
+
     const payload = {
       domain: window.location.hostname,
       url: window.location.href,
@@ -41,20 +54,27 @@
       referrer: document.referrer || null,
       eventType: eventName,
       properties: props,
+      websiteId: websiteId, // Attach website ID if available
     };
-  
+
     queue.push(payload);
     console.log("📩 Queued Event:", JSON.stringify(payload));
-  
-    if (socket.readyState === WebSocket.OPEN) {
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
       console.log("🚀 Sending event immediately...");
       sendQueue();
     }
   };
-  
+
   // Send queued events
   const sendQueue = () => {
-    if (queue.length === 0 || socket.readyState !== WebSocket.OPEN) return;
+    if (
+      !websiteId ||
+      queue.length === 0 ||
+      !socket ||
+      socket.readyState !== WebSocket.OPEN
+    )
+      return;
     try {
       socket.send(JSON.stringify(queue));
       console.log("[Analytics] Sent:", queue.length, "events");
@@ -66,10 +86,19 @@
 
   setInterval(sendQueue, CONFIG.batchInterval);
 
-  // Auto-track pageview and initialize
-  initSocket();
-  trackEvent("pageview");
+  // Function to set website ID and track session
+  const trackWebsiteSession = (id) => {
+    if (!id) {
+      console.warn("[Analytics] Invalid website ID. Tracking is disabled.");
+      return;
+    }
 
-  // Expose global track function
+    websiteId = id;
+    initSocket();
+    trackEvent("session_start", { websiteId: id });
+  };
+
+  // Expose global functions
   window.track = (eventName, properties) => trackEvent(eventName, properties);
+  window.trackWebsiteSession = trackWebsiteSession;
 })();

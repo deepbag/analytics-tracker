@@ -11,7 +11,6 @@ wss.on("connection", (ws) => {
   console.log("🔗 New client connected");
 
   ws.on("message", (message) => {
-    console.log("📩 Raw Received Data:", message.toString()); // Log everything received
     try {
       const data = JSON.parse(message.toString());
       console.log("📩 Parsed Event:", data);
