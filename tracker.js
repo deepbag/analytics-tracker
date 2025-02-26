@@ -2,7 +2,7 @@
   "use strict";
 
   const CONFIG = {
-    serverUrl: "ws://localhost:5000", // Change this to your WebSocket server URL
+    serverUrl: "ws://43.204.86.69:5000", // Change this to your WebSocket server URL
     batchInterval: 5000, // Send every 5 seconds
   };
 
