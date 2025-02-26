@@ -2,7 +2,7 @@
   "use strict";
 
   const CONFIG = {
-    serverUrl: "ws://localhost:9000", // Change this to your WebSocket server URL
+    serverUrl: "ws://localhost:8000", // Change this to your WebSocket server URL
     batchInterval: 5000, // Send every 5 seconds
   };
 
@@ -115,9 +115,18 @@
     }
 
     websiteId = id;
-    await fetchLocation(); // Fetch location before tracking session
+    await fetchLocation();
     initSocket();
     trackEvent("session_start", { websiteId: id });
+
+    return new Promise((resolve) => {
+      const checkSocket = setInterval(() => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          clearInterval(checkSocket);
+          resolve();
+        }
+      }, 100);
+    });
   };
 
   // Expose global functions
